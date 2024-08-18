@@ -1,0 +1,10 @@
+__pycache__/
+
+# Contains credentials.json
+.config/
+
+# Enviroment
+.env
+
+# Contains drive downloaded files
+downloads/
