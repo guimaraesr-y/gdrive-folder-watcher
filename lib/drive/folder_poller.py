@@ -35,8 +35,14 @@ class FolderPoller:
         print("[+] Polling...")
 
         while True:
-            # list all files in the folder
-            current_files = self.drive_service.list_files_in_folder(self.folder_id)
+            try:
+                # list all files in the folder
+                current_files = self.drive_service.list_files_in_folder(self.folder_id)
+            except Exception as e:
+                print(f"Error listing files in folder: {e}")
+                time.sleep(self.poll_interval)
+                continue
+            
             current_file_ids = {file["id"] for file in current_files}
 
             # detected new files
