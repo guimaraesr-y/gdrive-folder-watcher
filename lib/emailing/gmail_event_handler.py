@@ -17,5 +17,5 @@ class GmailEventHandler(EventHandler):
                 to=email,
                 subject="New file detected!",
                 message_text=f"A new file {file_path.name} was detected in your Google Drive. Please check.",
-                files=[file_path.absolute()],
+                files=[file_path],
             )

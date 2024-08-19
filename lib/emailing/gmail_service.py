@@ -1,8 +1,10 @@
+import pathlib
 import smtplib
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import List
 
 
 class GmailService:
@@ -10,7 +12,9 @@ class GmailService:
         self.email = email
         self.app_password = app_password
 
-    def send_message(self, to: str, subject: str, message_text: str, files: str = None):
+    def send_message(
+        self, to: str, subject: str, message_text: str, files: List[pathlib.Path] = None
+    ):
         """Send an email message using the Gmail SMTP server."""
         msg = MIMEMultipart()
         msg["From"] = self.email
@@ -28,7 +32,7 @@ class GmailService:
 
                 encoders.encode_base64(attachment)
                 attachment.add_header(
-                    "Content-Disposition", f"attachment; filename= {file}"
+                    "Content-Disposition", f"attachment; filename= {file.name}"
                 )
 
                 msg.attach(attachment)

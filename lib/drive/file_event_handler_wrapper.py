@@ -1,4 +1,6 @@
 import pathlib
+from queue import Queue
+from threading import Thread
 from typing import List
 
 from abc import ABC, abstractmethod
@@ -7,11 +9,11 @@ from lib.drive.drive_service import DriveService
 
 
 class EventHandler(ABC):
-    
+
     @abstractmethod
     def on_new_file_detected(self, file: dict, file_path: pathlib.Path) -> None:
         pass
-    
+
 
 class FileEventHandlerWrapper(EventHandler):
 
@@ -24,6 +26,23 @@ class FileEventHandlerWrapper(EventHandler):
         self.drive_service = drive_service
         self.handlers = [*handlers]
         self.delete_local_file_after_handled = delete_local_file_after_handled
+        
+        self.producer_queue = Queue()
+        self.consumer_queue = Queue()
+        self.running = True
+        
+        # Start the consumer and producer threads
+        self.producer_thread = Thread(
+            target=self.__produce_file_event,
+            daemon=True
+        )
+        self.consumer_thread = Thread(
+            target=self.__consume_file_event,
+            daemon=True
+        )
+        
+        self.producer_thread.start()
+        self.consumer_thread.start()
 
     def on_new_file_detected(self, file: dict) -> None:
         """
@@ -45,13 +64,31 @@ class FileEventHandlerWrapper(EventHandler):
 
         print(f"New file detected: {file_name} (ID: {file_id})")
 
-        # downloads the file
-        self.drive_service.download_file_by_id(file_id, download_path)
+        self.producer_queue.put((file, download_path))
         
-        # calls the handlers
-        for handler in self.handlers:
-            handler.on_new_file_detected(file, download_path)
+    def stop(self):
+        """Method to stop the producer and consumer threads"""
+        self.running = False
+        self.producer_thread.join()
+        self.consumer_thread.join()
 
-        # deletes the file if needed
-        if self.delete_local_file_after_handled:
-            pathlib.Path(download_path).unlink()
+    def __produce_file_event(self) -> None:
+        while self.running:
+            file, download_path = self.producer_queue.get()
+            self.drive_service.download_file_by_id(file.get("id"), download_path)
+
+            self.consumer_queue.put((file, download_path))            
+            self.producer_queue.task_done()
+
+    def __consume_file_event(self) -> None:
+        while self.running:
+            file, download_path = self.consumer_queue.get()
+
+            for handler in self.handlers:
+                handler.on_new_file_detected(file, download_path)
+
+            if self.delete_local_file_after_handled:
+                pathlib.Path(download_path).unlink()
+            
+            self.consumer_queue.task_done()
+            
