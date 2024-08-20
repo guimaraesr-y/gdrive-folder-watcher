@@ -2,6 +2,7 @@ import time
 
 from lib.drive.drive_service import DriveService
 from lib.drive.file_event_handler_wrapper import FileEventHandlerWrapper
+from lib.persistence.persistence_service import PersistenceService
 
 
 class FolderPoller:
@@ -10,13 +11,15 @@ class FolderPoller:
         drive_service: DriveService,
         folder_id: str,
         event_handler: FileEventHandlerWrapper,
+        persistence_service: PersistenceService,
         poll_interval: int,
     ):
         self.drive_service = drive_service
         self.folder_id = folder_id
         self.event_handler = event_handler
+        self.persistence_service = persistence_service
         self.poll_interval = poll_interval
-        self.known_files = set()
+        self.known_files = set(self.persistence_service.read_data())
 
     def poll(self):
         """
@@ -44,6 +47,9 @@ class FolderPoller:
                 continue
             
             current_file_ids = {file["id"] for file in current_files}
+            
+            # persists the list of known files
+            self.persistence_service.write_data('\n'.join(current_file_ids))
 
             # detected new files
             new_files = [

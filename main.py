@@ -5,6 +5,7 @@ from lib.drive.file_event_handler_wrapper import FileEventHandlerWrapper
 from lib.drive.folder_poller import FolderPoller
 from lib.emailing.gmail_event_handler import GmailEventHandler
 from lib.emailing.gmail_service import GmailService
+from lib.persistence.persistence_service import PersistenceService
 
 
 class App:
@@ -16,6 +17,7 @@ class App:
         to_email: List[str],
     ):
         self.drive_service = DriveService(credentials_file, SCOPES)
+        self.persistence_service = PersistenceService()
 
         gmail_service = GmailService(APP_EMAIL, APP_PASSWORD)
         self.gmail_handler = GmailEventHandler(
@@ -27,8 +29,13 @@ class App:
             handlers=[self.gmail_handler],
             delete_local_file_after_handled=True,
         )
+        
         self.folder_poller = FolderPoller(
-            self.drive_service, folder_id, self.event_handler, poll_interval
+            self.drive_service,
+            folder_id,
+            self.event_handler,
+            self.persistence_service,
+            poll_interval,
         )
 
     def run(self):
